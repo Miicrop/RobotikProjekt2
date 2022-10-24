@@ -1,0 +1,76 @@
+from cvzone.PoseModule import PoseDetector
+import cv2
+from pyfirmata import ArduinoMega, SERVO
+from time import sleep
+
+############################################################################################################
+#Arduino Config
+port = 'COM4'
+pin = 2
+board = ArduinoMega(port)
+sleep(2)
+
+board.digital[pin].mode = SERVO
+
+#Video Capture Config
+cap = cv2.VideoCapture(0)
+detector = PoseDetector()
+
+#Servo Config
+currentServoPos = 90
+
+############################################################################################################
+#Video Properties
+width = cap.get(3)  #640p
+height = cap.get(4)  #480p
+width_center = width/2  #320p
+height_center = height/2  #240p
+
+#Tracking Initialisierung
+xLandmarkMiddle = 0
+yLandmarkMiddle = 0
+
+############################################################################################################
+while True:
+    success, img = cap.read()
+    img = detector.findPose(img)
+    lmList, bboxInfo = detector.findPosition(img, bboxWithHands=False)
+
+    if bboxInfo:
+        center = bboxInfo["center"]
+        cv2.circle(img, center, 5, (255, 0, 255), cv2.FILLED)
+
+        #Landmark Coordinaten Schultern
+        xLandmarkLeft = lmList[11][1]
+        yLandmarkLeft = lmList[11][2]
+        xLandmarkRight = lmList[12][1]
+        yLandmarkRight = lmList[12][2]
+
+        xLandmarkMiddle = (xLandmarkRight - xLandmarkLeft)/2 + xLandmarkLeft
+        yLandmarkMiddle = (yLandmarkRight - yLandmarkLeft)/2 + yLandmarkLeft
+
+    #Is there Movement in the Video?
+    #Bewegung nach links oder rechts
+
+    #First go to Standard Position 90 deg
+    board.digital[pin].write(currentServoPos)
+
+    #Peron in the right side of the frame
+    if int(xLandmarkMiddle) > 360:
+        currentServoPos = currentServoPos - 1
+    #Person in the left side of the frame
+    elif int(xLandmarkMiddle) < 280:
+        currentServoPos = currentServoPos + 1
+    #Person in the middle of the frame
+    else:
+        print("middle")
+
+    board.digital[pin].write(currentServoPos)
+
+    cv2.imshow("Image", img)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
