@@ -3,7 +3,7 @@ import cv2
 from pyfirmata import ArduinoNano, SERVO
 from time import sleep
 
-############################################################################################################
+#######################################################################################################################
 # Arduino Config
 port = 'COM5'
 pin = 3
@@ -12,6 +12,9 @@ sleep(2)
 
 board.digital[pin].mode = SERVO
 
+# Parameter for Tracking Leeway
+parameter = 40
+
 # Video Capture Config
 cap = cv2.VideoCapture(0)
 detector = PoseDetector()
@@ -19,7 +22,7 @@ detector = PoseDetector()
 # Servo Config
 currentServoPos = 90
 
-############################################################################################################
+#######################################################################################################################
 # Video Properties
 width = cap.get(3)  # 640p
 height = cap.get(4)  # 480p
@@ -30,11 +33,16 @@ height_center = height/2  # 240p
 xLandmarkMiddle = 0
 yLandmarkMiddle = 0
 
-############################################################################################################
+#######################################################################################################################
 while True:
     success, img = cap.read()
     img = detector.findPose(img)
     lmList, bboxInfo = detector.findPosition(img, bboxWithHands=False)
+
+    # Shows the current Servo Position, X and Y Value
+    cv2.putText(img, "Servo Pos: " + str(currentServoPos), (20, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+    cv2.putText(img, "x: " + str(xLandmarkMiddle), (20, 100), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+    cv2.putText(img, "y: " + str(yLandmarkMiddle), (20, 150), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
 
     if bboxInfo:
         center = bboxInfo["center"]
@@ -49,30 +57,35 @@ while True:
         xLandmarkMiddle = (xLandmarkRight - xLandmarkLeft)/2 + xLandmarkLeft
         yLandmarkMiddle = (yLandmarkRight - yLandmarkLeft)/2 + yLandmarkLeft
 
-############################################################################################################
-    #  go to Standard Position 90 deg
-    board.digital[pin].write(currentServoPos)
+#######################################################################################################################
+        #  go to Standard Position 90 deg
+        #board.digital[pin].write(currentServoPos)
 
-    # Horizontal Tracking
-    # Person on the right side of the frame
-    if int(xLandmarkMiddle) > 360:
-        currentServoPos = currentServoPos - 1
-        
-    # Person on the left side of the frame
-    elif int(xLandmarkMiddle) < 280:
-        currentServoPos = currentServoPos + 1
-        
-    # Person in the middle of the frame
-    else:
-        print("middle")
-        
-    # move Servo to correkt Position
+        # Horizontal Tracking
+        # Person on the right side of the frame
+        if int(xLandmarkMiddle) > width_center + parameter:
+            if currentServoPos > 0:
+                currentServoPos = currentServoPos - 1
+            else:
+                currentServoPos = currentServoPos + 1
+
+        # Person on the left side of the frame
+        elif int(xLandmarkMiddle) < width_center - parameter:
+            if currentServoPos < 180:
+                currentServoPos = currentServoPos + 1
+            else:
+                currentServoPos = currentServoPos - 1
+        # Person in the middle of the frame
+        else:
+            print("middle")
+
+    # move Servo to correct Position
     board.digital[pin].write(currentServoPos)
 
     # show Video
     cv2.imshow("Image", img)
 
-############################################################################################################
+#######################################################################################################################
 
     #close everything with Hotkey: q
     if cv2.waitKey(1) & 0xFF == ord('q'):
