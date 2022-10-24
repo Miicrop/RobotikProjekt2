@@ -1,32 +1,32 @@
 from cvzone.PoseModule import PoseDetector
 import cv2
-from pyfirmata import ArduinoMega, SERVO
+from pyfirmata import ArduinoNano, SERVO
 from time import sleep
 
 ############################################################################################################
-#Arduino Config
-port = 'COM4'
-pin = 2
-board = ArduinoMega(port)
+# Arduino Config
+port = 'COM5'
+pin = 3
+board = ArduinoNano(port)
 sleep(2)
 
 board.digital[pin].mode = SERVO
 
-#Video Capture Config
+# Video Capture Config
 cap = cv2.VideoCapture(0)
 detector = PoseDetector()
 
-#Servo Config
+# Servo Config
 currentServoPos = 90
 
 ############################################################################################################
-#Video Properties
-width = cap.get(3)  #640p
-height = cap.get(4)  #480p
-width_center = width/2  #320p
-height_center = height/2  #240p
+# Video Properties
+width = cap.get(3)  # 640p
+height = cap.get(4)  # 480p
+width_center = width/2  # 320p
+height_center = height/2  # 240p
 
-#Tracking Initialisierung
+# Tracking Initialising
 xLandmarkMiddle = 0
 yLandmarkMiddle = 0
 
@@ -40,7 +40,7 @@ while True:
         center = bboxInfo["center"]
         cv2.circle(img, center, 5, (255, 0, 255), cv2.FILLED)
 
-        #Landmark Coordinaten Schultern
+        # Landmark Coordinaten Schultern
         xLandmarkLeft = lmList[11][1]
         yLandmarkLeft = lmList[11][2]
         xLandmarkRight = lmList[12][1]
@@ -49,26 +49,32 @@ while True:
         xLandmarkMiddle = (xLandmarkRight - xLandmarkLeft)/2 + xLandmarkLeft
         yLandmarkMiddle = (yLandmarkRight - yLandmarkLeft)/2 + yLandmarkLeft
 
-    #Is there Movement in the Video?
-    #Bewegung nach links oder rechts
-
-    #First go to Standard Position 90 deg
+############################################################################################################
+    #  go to Standard Position 90 deg
     board.digital[pin].write(currentServoPos)
 
-    #Peron in the right side of the frame
+    # Horizontal Tracking
+    # Person on the right side of the frame
     if int(xLandmarkMiddle) > 360:
         currentServoPos = currentServoPos - 1
-    #Person in the left side of the frame
+        
+    # Person on the left side of the frame
     elif int(xLandmarkMiddle) < 280:
         currentServoPos = currentServoPos + 1
-    #Person in the middle of the frame
+        
+    # Person in the middle of the frame
     else:
         print("middle")
-
+        
+    # move Servo to correkt Position
     board.digital[pin].write(currentServoPos)
 
+    # show Video
     cv2.imshow("Image", img)
 
+############################################################################################################
+
+    #close everything with Hotkey: q
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
