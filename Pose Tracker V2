@@ -53,20 +53,20 @@ def moveX():
         else:
             currentServoPos -= 1
 
-
 # Vertical Tracking
 def moveY():
     # Person on the bottom side
     global currentServoPosVertical
     if int(yLandmarkMiddle) > height_center:
         currentServoPosVertical = 60
-        #currentServoPosVertical = currentServoPosVertical - 1
+        #currentServoPosVertical -=  1
     # Person on the top side
     elif int(yLandmarkMiddle) < height_center:
         currentServoPosVertical = 120
-        #currentServoPosVertical = currentServoPosVertical + 1
+        #currentServoPosVertical += 1
 
 #######################################################################################################################
+
 while True:
     success, img = cap.read()
     img = detector.findPose(img)
