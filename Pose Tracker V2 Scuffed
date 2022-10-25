@@ -1,0 +1,118 @@
+from cvzone.PoseModule import PoseDetector
+import cv2
+from pyfirmata import ArduinoNano, SERVO
+from time import sleep
+
+#######################################################################################################################
+# Arduino Config
+port = 'COM5'
+pin = 3
+pin2 = 5
+board = ArduinoNano(port)
+sleep(2)
+
+board.digital[pin].mode = SERVO
+board.digital[pin2].mode = SERVO
+
+# Parameter for Tracking Leeway
+parameter = 40
+
+# Video Capture Config
+cap = cv2.VideoCapture(0)
+detector = PoseDetector()
+
+# Servo Config
+globvar = currentServoPos = 90
+globvar = currentServoPosVertical = 90
+
+#######################################################################################################################
+# Video Properties
+width = cap.get(3)  # 640p
+height = cap.get(4)  # 480p
+width_center = width/2  # 320p
+height_center = height/2  # 240p
+
+# Tracking Initialising
+xLandmarkMiddle = 0
+yLandmarkMiddle = 0
+
+#######################################################################################################################
+# Horizontal Tracking
+def moveX():
+    # Person on the right side of the frame
+    global currentServoPos
+    if int(xLandmarkMiddle) < width_center + parameter:
+        if currentServoPos > 0:
+            currentServoPos -= 1
+        else:
+            currentServoPos += 1
+    # Person on the left side of the frame
+    elif int(xLandmarkMiddle) > width_center - parameter:
+        if currentServoPos < 180:
+            currentServoPos += 1
+        else:
+            currentServoPos -= 1
+
+# Vertical Tracking
+def moveY():
+    # Person on the right side of the frame
+    global currentServoPosVertical
+    if int(yLandmarkMiddle) < height_center:
+        # currentServoPosVertical = 60
+        currentServoPosVertical -= 1
+    # Person on the left side of the frame
+    elif int(yLandmarkMiddle) > height_center:
+        # currentServoPosVertical = 120
+        currentServoPosVertical += 1
+
+#######################################################################################################################
+while True:
+    success, img = cap.read()
+    img = detector.findPose(img)
+    lmList, bboxInfo = detector.findPosition(img, bboxWithHands=False)
+
+    # Shows the current Servo Position, X and Y Value
+    cv2.putText(img, "Servo: " + str(currentServoPos) + " | " + str(currentServoPosVertical), (20, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+    cv2.putText(img, "x|y: " + str(xLandmarkMiddle) + " | " + str(yLandmarkMiddle), (20, 100), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+
+    # Shows the tracking leeway range with adjustable Parameter
+    cv2.line(img, (int(width_center) - parameter, 0), (int(width_center) - parameter, 480), (153, 51, 255), 1) # line left
+    cv2.line(img, (int(width_center) + parameter, 0), (int(width_center) + parameter, 480), (153, 51, 255), 1) # line right
+    cv2.line(img, (0, int(height_center)), (640, int(height_center)), (153, 51, 255), 1) # line middle
+
+    if bboxInfo:
+        center = bboxInfo["center"]
+        cv2.circle(img, center, 5, (255, 0, 255), cv2.FILLED)
+
+        # Landmark Coordinates Shoulders
+        xLandmarkLeft = lmList[11][1]
+        yLandmarkLeft = lmList[11][2]
+        xLandmarkRight = lmList[12][1]
+        yLandmarkRight = lmList[12][2]
+
+        xLandmarkMiddle = (xLandmarkRight - xLandmarkLeft)/2 + xLandmarkLeft
+        yLandmarkMiddle = (yLandmarkRight - yLandmarkLeft)/2 + yLandmarkLeft
+
+#######################################################################################################################
+        #  go to Standard Position 90 deg
+        board.digital[pin].write(currentServoPos)
+        board.digital[pin2].write(currentServoPosVertical)
+
+    # Function calls to change servo positions
+    moveX()
+    moveY()
+
+    # move Servo to correct Position
+    board.digital[pin].write(currentServoPos)
+    #board.digital[pin2].write(currentServoPosVertical)
+
+    # show Video
+    cv2.imshow("Image", img)
+
+#######################################################################################################################
+    #close everything with Hotkey: q
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
