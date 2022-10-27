@@ -1,0 +1,143 @@
+from cvzone.PoseModule import PoseDetector
+import cv2
+from pyfirmata import ArduinoNano, SERVO
+from time import sleep
+import time
+
+#######################################################################################################################
+# Arduino Config
+port = 'COM5'
+pin = 3
+pin2 = 5
+board = ArduinoNano(port)
+sleep(2)
+
+board.digital[pin].mode = SERVO
+board.digital[pin2].mode = SERVO
+
+# Configuration variables
+parameter = 40
+offset = 70
+moving = True
+rotate = True
+
+# Video Capture Config
+cap = cv2.VideoCapture(0)
+detector = PoseDetector()
+
+# Servo Config
+currentServoPos = 90
+currentServoPosVertical = 90
+
+#######################################################################################################################
+# Video Properties
+width = cap.get(3)  # 640p
+height = cap.get(4)  # 480p
+width_center = width/2  # 320p
+height_center = height/2  # 240p
+
+# Tracking Initialising
+xLandmarkMiddle = 0
+yLandmarkMiddle = 0
+
+#######################################################################################################################
+# Horizontal Tracking
+def moveX():
+    # Person on the right side
+    global currentServoPos
+    if int(xLandmarkMiddle) > width_center + parameter + offset:
+        if currentServoPos > 0:
+            currentServoPos -= 1
+        else:
+            currentServoPos += 1
+    # Person on the left side
+    elif int(xLandmarkMiddle) < width_center - parameter + offset:
+        if currentServoPos < 180:
+            currentServoPos += 1
+        else:
+            currentServoPos -= 1
+
+# Vertical Tracking
+def moveY():
+    # Person on the bottom side
+    global currentServoPosVertical
+    if int(yLandmarkMiddle) > height_center:
+        currentServoPosVertical = 60
+        #currentServoPosVertical -=  1
+    # Person on the top side
+    elif int(yLandmarkMiddle) < height_center:
+        currentServoPosVertical = 120
+        #currentServoPosVertical += 1
+
+#######################################################################################################################
+
+while True:
+#######################################################################################################################
+    ###timeStart = time.process_time_ns()
+#######################################################################################################################
+
+    #success, img = cap.read()
+    if rotate:
+        success, image = cap.read()
+        img = cv2.rotate(image, cv2.ROTATE_180)
+    else:
+        success, img = cap.read()
+    img = detector.findPose(img)
+
+    lmList, bboxInfo = detector.findPosition(img, bboxWithHands=False)
+
+    # Shows the current Servo Position, X and Y Value
+    cv2.putText(img, "Servo: " + str(currentServoPos) + " | " + str(currentServoPosVertical), (20, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+    cv2.putText(img, "x|y: " + str(xLandmarkMiddle) + " | " + str(yLandmarkMiddle), (20, 100), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+
+    # Shows the tracking leeway range with adjustable Parameter
+    cv2.line(img, (int(width_center) - parameter + offset, 0), (int(width_center) - parameter + offset, 480), (153, 51, 255), 1) # line left
+    cv2.line(img, (int(width_center) + parameter + offset, 0), (int(width_center) + parameter + offset, 480), (153, 51, 255), 1) # line right
+    cv2.line(img, (0, int(height_center)), (640, int(height_center)), (153, 51, 255), 1) # line middle
+
+    if bboxInfo:
+        center = bboxInfo["center"]
+        cv2.circle(img, (int(xLandmarkMiddle), int(yLandmarkMiddle)), 8, (0, 255, 0), cv2.FILLED)
+
+        # Landmark Coordinates Shoulders
+        xLandmarkLeft = lmList[11][1]
+        yLandmarkLeft = lmList[11][2]
+        xLandmarkRight = lmList[12][1]
+        yLandmarkRight = lmList[12][2]
+
+        xLandmarkMiddle = (xLandmarkRight - xLandmarkLeft)/2 + xLandmarkLeft
+        yLandmarkMiddle = (yLandmarkRight - yLandmarkLeft)/2 + yLandmarkLeft
+
+#######################################################################################################################
+        #  go to standard position 90 deg
+        board.digital[pin].write(currentServoPos)
+        board.digital[pin2].write(currentServoPosVertical)
+
+    # checks if moving is enabled or paused
+    if moving:
+        # Function calls to change servo positions
+        moveX()
+        moveY()
+
+    # move Servo to correct Position
+    board.digital[pin].write(currentServoPos)
+    #board.digital[pin2].write(currentServoPosVertical)
+
+    # show Video
+    cv2.imshow("Image", img)
+
+#######################################################################################################################
+    # moving can be enabled or paused with the Hotkey: w
+    if cv2.waitKey(30) & 0xFF == ord('w'):
+        moving = not moving
+
+    #close everything with Hotkey: q
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+#######################################################################################################################
+    ###timeEnd = time.process_time_ns()
+    ###print((timeEnd-timeStart)/1000000)
+#######################################################################################################################
+cap.release()
+cv2.destroyAllWindows()
