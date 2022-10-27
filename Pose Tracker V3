@@ -17,9 +17,9 @@ board.digital[pin2].mode = SERVO
 
 # Configuration variables
 parameter = 40
-offset = 70
-moving = True
-rotate = True
+offset = 0
+moving = 1
+rotate = False
 
 # Video Capture Config
 cap = cv2.VideoCapture(0)
@@ -70,7 +70,40 @@ def moveY():
         #currentServoPosVertical += 1
 
 #######################################################################################################################
+def changeParameter(i):
+    global parameter
+    parameter = i
 
+def changeOffset(i):
+    global offset
+    offset = i
+
+def rotateWindow(i):
+    global rotate
+    if rotate:
+        rotate = False
+    else:
+        rotate = True
+    print(rotate)
+
+def cameraMovement(i):
+    global moving
+    moving = i
+    print(moving)
+
+# Trackbar Config
+cv2.namedWindow("Changer", cv2.WINDOW_AUTOSIZE)
+cv2.resizeWindow("Changer", 400, 200)
+
+cv2.createTrackbar("Parameter", "Changer", 0, 250, changeParameter)
+cv2.setTrackbarPos("Parameter", "Changer", 40)
+cv2.createTrackbar("Offset", "Changer", 0, 250, changeOffset)
+cv2.setTrackbarMin("Offset", "Changer", -250)
+cv2.createTrackbar("Flip Cam", "Changer", 0, 1, rotateWindow)
+cv2.createTrackbar("Move Cam", "Changer", 0, 1, cameraMovement)
+cv2.setTrackbarPos("Move Cam", "Changer", 1)
+
+#######################################################################################################################
 while True:
 #######################################################################################################################
     ###timeStart = time.process_time_ns()
@@ -114,7 +147,7 @@ while True:
         board.digital[pin2].write(currentServoPosVertical)
 
     # checks if moving is enabled or paused
-    if moving:
+    if moving == 1:
         # Function calls to change servo positions
         moveX()
         moveY()
