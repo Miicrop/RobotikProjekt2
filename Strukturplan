@@ -1,0 +1,36 @@
+Kamerasystem
+    Hardware
+        Servos
+            Optimale Servowahl berechnen
+            Antriebsleistung minimal
+        Kamera
+        Mikrocontroller
+        Gerüst
+        Elektrik Komponenten
+    Software
+        Arduino
+        Python
+            Bildbearbeitung
+                Ausgabe Koordinaten
+                Ausgabe Servo Positionen
+                Flag ausgeben
+            Tracking
+            Movement
+                Algorithmus für Servoansteuerung
+            Kundenanforderung
+                Offset
+                Parameter für Movement Safezone
+                Kamera Bewegung muss anhaltbar sein
+                Strategie: keine Person im Bild
+                an Decke und Boden montierbar
+                Rechenzeit unter 50ms
+            Benutzeroberfläche
+                Einsteller und Buttons für Kundenanforderungen
+    Projektmanagement
+        Aufgabenverteilung
+        Rollenverteilung
+        Dokumentation
+        Präsentation
+        Zeitmanagement
+    Berechnungen
+        Modellierung der Regelstrecke
