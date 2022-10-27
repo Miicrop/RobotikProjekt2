@@ -34,3 +34,38 @@ Kamerasystem
         Zeitmanagement
     Berechnungen
         Modellierung der Regelstrecke
+
+
+###########################################################
+Mermaid Code
+###########################################################
+
+graph LR
+    A((Kamerasystem))
+
+    A---B((Hardware))
+        B---B1{{Servos}}
+            B1---B11[- Servowahl <br> - Antriebsleistung]
+        B---B2{{Kamera}}
+        B---B3{{Mikrocontroller}}
+        B---B4{{Gerüst}}
+        B---B5{{Elekronik}}
+
+    A---C((Software))
+        C---C1{{Arduino}}
+        C----C2{{Python}}
+            C2---C21([Bildbearbeitung])
+                C21---C211[- Ausgabe Koordinaten <br> - Ausgabe Servo Position <br> - Ausgabe Flag]
+            C2---C22([Tracking])
+            C2---C23([Movement])
+                C23---C231[- Algorithmus für Servoansteuerung]
+            C2---C24([Kundenanforderungen])
+                C24---C241[- Offset <br> - Parameter für Movement <br> - Kamera muss anhaltbar sein <br> - Strategie: keine Person gefunden <br> - Decke oder Boden <br> - Rechenzeit unter 50ms]
+            C2---C25([Benutzeroberfläche])
+                C25---C251[- Einstellungen für Kundenanforderungen]
+
+    A---D((Projektmanagement))
+        D---D1[- Aufgabenverteilung <br> - Rollenverteilung <br> - Dokumentation <br> - Präsentation <br> - Zeitmanagement]
+
+    A---E((Berechnungen))
+        E---E1[Modellierung der Regelstrecke]
