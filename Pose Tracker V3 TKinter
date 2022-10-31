@@ -6,6 +6,8 @@ import time
 from tkinter import *
 
 #######################################################################################################################
+#                                                   Variables
+#######################################################################################################################
 # Arduino Config
 port = 'COM5'
 pin = 3
@@ -30,7 +32,6 @@ detector = PoseDetector()
 currentServoPos = 90
 currentServoPosVertical = 90
 
-#######################################################################################################################
 # Video Properties
 width = cap.get(3)  # 640p
 height = cap.get(4)  # 480p
@@ -41,6 +42,8 @@ height_center = height/2  # 240p
 xLandmarkMiddle = 0
 yLandmarkMiddle = 0
 
+#######################################################################################################################
+#                                                   Functions
 #######################################################################################################################
 # Horizontal Tracking
 def moveX():
@@ -70,7 +73,6 @@ def moveY():
         currentServoPosVertical = 120
         #currentServoPosVertical += 1
 
-#######################################################################################################################
 def changeParameter(i):
     global parameter
     parameter = parameterState.get()
@@ -92,6 +94,9 @@ def cameraMovement():
         moving = True
         buttonMovement = Button(root, bg='#52AD9B',fg='#FFFFFF', width=20, text="Movement", command=cameraMovement).place(relx=0.75, rely=0.85, anchor=CENTER)
 
+#######################################################################################################################
+#                                                       GUI
+#######################################################################################################################
 # Tkinter Setup
 root = Tk(className="TiltPan Camera Configuration")
 root.geometry("500x200")
@@ -122,13 +127,12 @@ buttonFlip = Button(root, bg='#413D4A', fg='#FFFFFF', width=20, text="Flip", com
 buttonMovement = Button(root, bg='#52AD9B', fg='#FFFFFF', width=20, text="Movement", command=cameraMovement).place(relx=0.75, rely=0.85, anchor=CENTER)
 
 #######################################################################################################################
+#                                                   Main Loop
+#######################################################################################################################
 while True:
     root.update()
-#######################################################################################################################
     #timeStart = time.process_time_ns()
-#######################################################################################################################
 
-    #success, img = cap.read()
     if rotate:
         success, image = cap.read()
         img = cv2.rotate(image, cv2.ROTATE_180)
@@ -164,7 +168,7 @@ while True:
             xLandmarkMiddle = (xLandmarkRight - xLandmarkLeft)/2 + xLandmarkLeft
             yLandmarkMiddle = (yLandmarkRight - yLandmarkLeft)/2 + yLandmarkLeft
 
-#######################################################################################################################
+########################################### Servo Steuerung ###########################################################
         #  go to standard position 90 deg
         board.digital[pin].write(currentServoPos)
         board.digital[pin2].write(currentServoPosVertical)
@@ -179,10 +183,11 @@ while True:
     board.digital[pin].write(currentServoPos)
     #board.digital[pin2].write(currentServoPosVertical)
 
+#######################################################################################################################
+
     # show Video
     cv2.imshow("Image", img)
 
-#######################################################################################################################
     # moving can be enabled or paused with the Hotkey: w
     if cv2.waitKey(30) & 0xFF == ord('w'):
         moving = not moving
@@ -191,9 +196,7 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-#######################################################################################################################
     #timeEnd = time.process_time_ns()
     #print((timeEnd-timeStart)/1000000)
-#######################################################################################################################
 cap.release()
 cv2.destroyAllWindows()
