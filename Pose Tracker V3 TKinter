@@ -85,7 +85,12 @@ def rotateWindow():
 
 def cameraMovement():
     global moving
-    moving = not moving
+    if moving:
+        moving = False
+        buttonMovement = Button(root, bg='#AD5264',fg='#FFFFFF', width=20, text="Movement", command=cameraMovement).place(relx=0.75, rely=0.85, anchor=CENTER)
+    else:
+        moving = True
+        buttonMovement = Button(root, bg='#52AD9B',fg='#FFFFFF', width=20, text="Movement", command=cameraMovement).place(relx=0.75, rely=0.85, anchor=CENTER)
 
 # Tkinter Setup
 root = Tk(className="TiltPan Camera Configuration")
@@ -113,8 +118,8 @@ scaleOffset = Scale(root,
               label = "Offset")
 scaleOffset.pack(anchor = CENTER)
 
-buttonFlip = Button(root, bg='#AD5264', width=20, text="Flip", command=rotateWindow).place(relx=0.25, rely=0.85, anchor=CENTER)
-buttonMovement = Button(root, bg='#52AD9B', width=20, text="Movement", command=cameraMovement).place(relx=0.75, rely=0.85, anchor=CENTER)
+buttonFlip = Button(root, bg='#413D4A', fg='#FFFFFF', width=20, text="Flip", command=rotateWindow).place(relx=0.25, rely=0.85, anchor=CENTER)
+buttonMovement = Button(root, bg='#52AD9B', fg='#FFFFFF', width=20, text="Movement", command=cameraMovement).place(relx=0.75, rely=0.85, anchor=CENTER)
 
 #######################################################################################################################
 while True:
