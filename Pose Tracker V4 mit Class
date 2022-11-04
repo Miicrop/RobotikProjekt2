@@ -1,9 +1,8 @@
 from cvzone.PoseModule import PoseDetector
 import cv2
 from pyfirmata import ArduinoNano, SERVO
-from time import sleep
-import time
 from tkinter import *
+import time
 
 #######################################################################################################################
 #                                                  Servo Class
@@ -21,22 +20,13 @@ class class_servo:
     def changeOffset(self, i):
         self.offset = int(i)
 
-    def move(self, servoY, xLandmarkMiddle, yLandmarkMiddle, width_center, height_center):
-        if int(xLandmarkMiddle) > width_center + self.parameter + self.offset:
+    def changePosition(self, landmarkMiddle, center):
+        if int(landmarkMiddle) > center + self.parameter + self.offset:
             if self.position > 0:
                 self.position -= 1
-        # Person on the left side
-        elif int(xLandmarkMiddle) < width_center - self.parameter + self.offset:
+        elif int(landmarkMiddle) < center - self.parameter + self.offset:
             if self.position < 180:
                 self.position += 1
-
-        if int(yLandmarkMiddle) > height_center + servoY.parameter + servoY.offset:
-            if servoY.position > 0:
-                servoY.position -= 1
-        # Person on the top side
-        elif int(yLandmarkMiddle) < height_center - servoY.parameter + servoY.offset:
-            if servoY.position < 180:
-                servoY.position += 1
 
 #######################################################################################################################
 #                                                   Variables
@@ -45,7 +35,6 @@ class class_servo:
 board = ArduinoNano('COM5')
 servoX = class_servo(3, 90)
 servoY = class_servo(5, 110)
-#sleep(1)
 board.digital[servoX.pin].mode = SERVO
 board.digital[servoY.pin].mode = SERVO
 
@@ -66,10 +55,10 @@ detector = PoseDetector()
 cap.set(cv2.CAP_PROP_BUFFERSIZE, 10)
 cap.set(3, 1280)
 cap.set(4, 960)
-width = int(cap.get(3))  # 640p
-height = int(cap.get(4))  # 480p
-width_center = int(width/2)  # 320p
-height_center = int(height/2)  # 240p
+width = int(cap.get(3))
+height = int(cap.get(4))
+width_center = int(width/2)
+height_center = int(height/2)
 
 # Tracking Initialising
 xLandmarkMiddle = 0
@@ -192,9 +181,10 @@ while True:
             xLandmarkMiddle = width - ((xLandmarkRight - xLandmarkLeft) / 2 + xLandmarkLeft)
             yLandmarkMiddle = height - ((yLandmarkRight - yLandmarkLeft) / 2 + yLandmarkLeft)
 
-    # checks if moving is enabled or paused and set Servo Positions
+    # checks if moving is enabled and set Servo Positions
     if moving:
-        servoX.move(servoY, xLandmarkMiddle, yLandmarkMiddle, width_center, height_center)
+        servoX.changePosition(xLandmarkMiddle, width_center)
+        servoY.changePosition(yLandmarkMiddle, height_center)
 
     #  move Servos
     board.digital[servoX.pin].write(servoX.position)
