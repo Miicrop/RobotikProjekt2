@@ -46,6 +46,7 @@ board.digital[servoY.pin].write(servoY.position)
 moving = True
 rotate = True
 stopCamera = False
+personLastSeen = 0
 
 # Video Capture Config
 cap = cv2.VideoCapture(0)
@@ -85,9 +86,8 @@ def stopCamera():
     stopCamera = True
 
 #######################################################################################################################
-#                                                       GUI
+#                                                      GUI
 #######################################################################################################################
-# Tkinter Setup
 root = Tk(className="TiltPan Camera Configuration")
 root.geometry("500x350")
 
@@ -181,12 +181,19 @@ while True:
             xLandmarkMiddle = width - ((xLandmarkRight - xLandmarkLeft) / 2 + xLandmarkLeft)
             yLandmarkMiddle = height - ((yLandmarkRight - yLandmarkLeft) / 2 + yLandmarkLeft)
 
-    # checks if moving is enabled and set Servo Positions
-    if moving:
-        servoX.changePosition(xLandmarkMiddle, width_center)
-        servoY.changePosition(yLandmarkMiddle, height_center)
+        # checks if moving is enabled and set Servo Positions
+        if moving:
+            servoX.changePosition(xLandmarkMiddle, width_center)
+            servoY.changePosition(yLandmarkMiddle, height_center)
 
-    #  move Servos
+        personLastSeen = time.time()
+
+    else:
+        if time.time() - personLastSeen > 2:
+            servoX.position = 90
+            servoY.position = 120
+
+    # move Servos
     board.digital[servoX.pin].write(servoX.position)
     board.digital[servoY.pin].write(servoY.position)
 
