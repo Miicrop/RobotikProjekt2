@@ -1,0 +1,218 @@
+from cvzone.PoseModule import PoseDetector
+import cv2
+from pyfirmata import ArduinoNano, SERVO
+from tkinter import *
+import time
+
+#######################################################################################################################
+#                                                  Servo Class
+#######################################################################################################################
+class class_servo:
+    def __init__(self, pin, position):
+        self.pin = pin
+        self.parameter = 60
+        self.offset = 0
+        self.position = position
+
+    def changeParameter(self, i):
+        self.parameter = int(i)
+
+    def changeOffset(self, i):
+        self.offset = int(i)
+
+    def changePosition(self, landmarkMiddle, center):
+        if int(landmarkMiddle) > center + self.parameter + self.offset:
+            if self.position > 0:
+                self.position -= 1
+        elif int(landmarkMiddle) < center - self.parameter + self.offset:
+            if self.position < 180:
+                self.position += 1
+
+#######################################################################################################################
+#                                                   Variables
+#######################################################################################################################
+# Arduino Config
+board = ArduinoNano('COM5')
+servoX = class_servo(3, 90)
+servoY = class_servo(5, 110)
+board.digital[servoX.pin].mode = SERVO
+board.digital[servoY.pin].mode = SERVO
+
+# set camera default to 90 degrees
+board.digital[servoX.pin].write(servoX.position)
+board.digital[servoY.pin].write(servoY.position)
+
+# Configuration variables
+moving = True
+rotate = True
+stopCamera = False
+personLastSeen = 0
+
+# Video Capture Config
+cap = cv2.VideoCapture(0)
+detector = PoseDetector()
+
+# Video Properties
+cap.set(cv2.CAP_PROP_BUFFERSIZE, 10)
+cap.set(3, 1280)
+cap.set(4, 960)
+width = int(cap.get(3))
+height = int(cap.get(4))
+width_center = int(width/2)
+height_center = int(height/2)
+
+# Tracking Initialising
+xLandmarkMiddle = 0
+yLandmarkMiddle = 0
+
+#######################################################################################################################
+#                                                   Functions
+#######################################################################################################################
+def rotateWindow():
+    global rotate
+    rotate = not rotate
+
+def cameraMovement():
+    global moving
+    if moving:
+        moving = False
+        buttonMovement = Button(root, bg='#AD5264',fg='#FFFFFF', width=20, text="Movement", command=cameraMovement).place(relx=0.75, rely=0.80, anchor=CENTER)
+    else:
+        moving = True
+        buttonMovement = Button(root, bg='#52AD9B',fg='#FFFFFF', width=20, text="Movement", command=cameraMovement).place(relx=0.75, rely=0.80, anchor=CENTER)
+
+def stopCamera():
+    global stopCamera
+    stopCamera = True
+
+def getX():
+    return xLandmarkMiddle
+
+def getY():
+    return yLandmarkMiddle
+
+def getPosition():
+    return [xLandmarkMiddle, yLandmarkMiddle]
+
+#######################################################################################################################
+#                                                      GUI
+#######################################################################################################################
+root = Tk(className="TiltPan Camera Configuration")
+root.geometry("500x350")
+
+parameterStateX = IntVar()
+scaleParameterX = Scale(root,
+                       command=servoX.changeParameter,
+                       variable=parameterStateX,
+                       from_ = 20,
+                       to = 250,
+                       orient = HORIZONTAL,
+                       length = 400,
+                       label = "Parameter X")
+scaleParameterX.pack(anchor = CENTER)
+
+parameterStateY = IntVar()
+scaleParameterY = Scale(root,
+                       command=servoY.changeParameter,
+                       variable=parameterStateY,
+                       from_ = 20,
+                       to = 250,
+                       orient = HORIZONTAL,
+                       length = 400,
+                       label = "Parameter Y")
+scaleParameterY.pack(anchor = CENTER)
+
+offsetStateX = IntVar()
+scaleOffsetX = Scale(root,
+                    command=servoX.changeOffset,
+                    variable=offsetStateX,
+                    from_ = -250,
+                    to = 250,
+                    orient = HORIZONTAL,
+                    length = 400,
+                    label = "Offset X")
+scaleOffsetX.pack(anchor = CENTER)
+
+offsetStateY = IntVar()
+scaleOffsetY = Scale(root,
+                    command=servoY.changeOffset,
+                    variable=offsetStateY,
+                    from_ = -250,
+                    to = 250,
+                    orient = HORIZONTAL,
+                    length = 400,
+                    label = "Offset Y")
+scaleOffsetY.pack(anchor = CENTER)
+
+buttonFlip = Button(root, bg='#413D4A', fg='#FFFFFF', width=20, text="Flip", command=rotateWindow).place(relx=0.25, rely=0.80, anchor=CENTER)
+buttonMovement = Button(root, bg='#52AD9B', fg='#FFFFFF', width=20, text="Movement", command=cameraMovement).place(relx=0.75, rely=0.80, anchor=CENTER)
+buttonStop = Button(root, bg='#AD5264', fg='#FFFFFF', width=20, text="Stop Camera", command=stopCamera).place(relx=0.5, rely=0.92, anchor=CENTER)
+
+#######################################################################################################################
+#                                                   Main Loop
+#######################################################################################################################
+while True:
+    #timeStart = time.process_time_ns()
+    root.update()
+
+    if rotate:
+        success, image = cap.read()
+        img = cv2.rotate(image, cv2.ROTATE_180)
+    else:
+        success, img = cap.read()
+    img = detector.findPose(img)
+    lmList, bboxInfo = detector.findPosition(img, bboxWithHands=False)
+
+    # Shows the current Servo Position, X and Y Value
+    cv2.putText(img, F"Servo: {servoX.position} | {servoY.position}", (20, 50), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+    cv2.putText(img, F"x|y: {xLandmarkMiddle} | {yLandmarkMiddle}", (20, 100), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 2)
+
+    # Shows the tracking leeway range with adjustable Parameter
+    cv2.line(img, (width_center - servoX.parameter + servoX.offset, 0), (width_center - servoX.parameter + servoX.offset, height), (153, 51, 255), 1)  # line left
+    cv2.line(img, (width_center + servoX.parameter + servoX.offset, 0), (width_center + servoX.parameter + servoX.offset, height), (153, 51, 255), 1)  # line right
+    cv2.line(img, (0, height_center + servoY.parameter + servoY.offset), (width, height_center + servoY.parameter + servoY.offset), (153, 51, 255), 1)  # line middle top
+    cv2.line(img, (0, height_center - servoY.parameter + servoY.offset), (width, height_center - servoY.parameter + servoY.offset), (153, 51, 255), 1)  # line middle bottom
+
+    if bboxInfo:
+        center = bboxInfo["center"]
+        cv2.circle(img, (int(xLandmarkMiddle), int(yLandmarkMiddle)), 8, (0, 255, 0), cv2.FILLED)
+
+        # Landmark Coordinates Shoulders
+        xLandmarkLeft = lmList[11][1]
+        yLandmarkLeft = lmList[11][2]
+        xLandmarkRight = lmList[12][1]
+        yLandmarkRight = lmList[12][2]
+
+        if rotate:
+            xLandmarkMiddle = (xLandmarkRight - xLandmarkLeft) / 2 + xLandmarkLeft
+            yLandmarkMiddle = (yLandmarkRight - yLandmarkLeft) / 2 + yLandmarkLeft
+        else:
+            xLandmarkMiddle = width - ((xLandmarkRight - xLandmarkLeft) / 2 + xLandmarkLeft)
+            yLandmarkMiddle = height - ((yLandmarkRight - yLandmarkLeft) / 2 + yLandmarkLeft)
+
+        # checks if moving is enabled and set Servo Positions
+        if moving:
+            servoX.changePosition(xLandmarkMiddle, width_center)
+            servoY.changePosition(yLandmarkMiddle, height_center)
+
+        personLastSeen = time.time()
+
+    else:
+        if time.time() - personLastSeen > 2:
+            servoX.position = 90
+            servoY.position = 120
+
+    # move Servos
+    board.digital[servoX.pin].write(servoX.position)
+    board.digital[servoY.pin].write(servoY.position)
+
+    # show Video
+    cv2.imshow("Image", img)
+
+    if stopCamera == True:
+        break
+
+    #timeEnd = time.process_time_ns()
+    #print((timeEnd-timeStart)/1000000)
+cap.release()
+cv2.destroyAllWindows()
